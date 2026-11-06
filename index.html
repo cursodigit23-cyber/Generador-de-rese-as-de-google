@@ -12,17 +12,50 @@
   <div class="mb-6 text-center">
     <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-2xl text-white shadow">★</div>
     <h1 class="text-2xl font-bold">Enlace de reseñas de Google</h1>
-    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Pega cualquier enlace de Google Maps, corto o largo.</p>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Ingresa tu Place ID o pega un enlace de Google Maps.</p>
   </div>
+
+  <section aria-label="Instrucciones para generar el enlace de reseñas" class="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <article>
+      <h2 class="text-base font-bold leading-6">Paso 1: Consigue tu Place ID con la herramienta oficial de Google</h2>
+      <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-700 dark:text-slate-300">
+        <li>
+          <b>Abre esta URL en una nueva pestaña:</b>
+          <a class="mt-1 block break-all font-medium text-blue-700 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" href="https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder" target="_blank" rel="noopener noreferrer">https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder</a>
+        </li>
+        <li>En el campo de búsqueda, <b>escribe el nombre exacto de tu negocio</b>.</li>
+        <li><b>Selecciona tu negocio</b> de la lista de resultados.</li>
+        <li><b>El Place ID aparece automáticamente</b> en un recuadro debajo del mapa. Ejemplo: <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs dark:bg-slate-800">ChIJ3zZGNQpFYA0R4hVJZZqqooY</code></li>
+        <li><b>Copia ese código</b> (selecciónalo y pulsa <kbd class="rounded border border-slate-300 px-1 font-mono text-xs dark:border-slate-600">Ctrl+C</kbd>).</li>
+      </ol>
+    </article>
+
+    <div class="my-5 border-t border-slate-200 dark:border-slate-700"></div>
+
+    <article>
+      <h2 class="text-base font-bold leading-6">Paso 2: Usa esta herramienta para generar tu enlace de reseñas</h2>
+      <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-700 dark:text-slate-300">
+        <li><b>Vuelve a esta página</b>.</li>
+        <li><b>Pega el Place ID</b> que copiaste en el campo que dice <i>“Pega el Place ID del negocio”</i>.</li>
+        <li>Haz clic en <b>“Generar enlace a reseñas”</b>.</li>
+        <li><b>¡Listo!</b> Verás aparecer:
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>Un <b>enlace de texto</b> que puedes copiar y pegar donde quieras (WhatsApp, email o redes sociales).</li>
+            <li>Un <b>código QR</b> que puedes copiar o descargar como JPG para imprimir en flyers, tarjetas o mostradores.</li>
+          </ul>
+        </li>
+      </ol>
+    </article>
+  </section>
 
   <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
     <input id="url" type="text" autocomplete="off" autofocus
-      placeholder="https://maps.app.goo.gl/…"
+      placeholder="Pega el Place ID del negocio"
       class="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950">
     <button id="btnGen"
       class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 dark:focus:ring-offset-slate-900">
       <svg id="spin" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
-      <span id="btnTxt">Generar enlace de reseña</span>
+      <span id="btnTxt">Generar enlace a reseñas</span>
     </button>
 
     <div id="error" role="alert" class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"></div>
@@ -88,7 +121,7 @@
   function setLoading(on) {
     $('btnGen').disabled = on;
     $('spin').classList.toggle('hidden', !on);
-    $('btnTxt').textContent = on ? 'Procesando…' : 'Generar enlace de reseña';
+    $('btnTxt').textContent = on ? 'Procesando…' : 'Generar enlace a reseñas';
   }
   function showError(html) {
     $('result').classList.add('hidden');
