@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador de enlace de reseñas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100">
+<main class="mx-auto flex min-h-screen max-w-xl flex-col justify-center px-4 py-10">
+
+  <div class="mb-6 text-center">
+    <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-2xl text-white shadow">★</div>
+    <h1 class="text-2xl font-bold">Enlace de reseñas de Google</h1>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Pega cualquier enlace de Google Maps, corto o largo.</p>
+  </div>
+
+  <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <input id="url" type="text" autocomplete="off" autofocus
+      placeholder="https://maps.app.goo.gl/…"
+      class="w-full rounded-xl border border-slate-300 bg-white px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950">
+    <button id="btnGen"
+      class="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-4 text-base font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 dark:focus:ring-offset-slate-900">
+      <svg id="spin" class="hidden h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>
+      <span id="btnTxt">Generar enlace de reseña</span>
+    </button>
+
+    <div id="error" role="alert" class="mt-4 hidden rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"></div>
+
+    <div id="result" class="mt-5 hidden border-t border-slate-200 pt-5 dark:border-slate-800">
+      <p id="bizName" class="mb-2 text-sm font-semibold"></p>
+      <input id="link" type="text" readonly
+        class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button id="btnCopy" class="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700">Copiar</button>
+        <button id="btnTest" class="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">Probar enlace ↗</button>
+      </div>
+      <p id="approxNote" class="mt-3 hidden rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">Este ID se detectó leyendo la página del negocio, no la URL. Confirma con “Probar enlace” que sea el correcto.</p>
+      <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Pulsa “Probar enlace” para confirmar que abre el negocio correcto.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const REVIEW_BASE = 'https://search.google.com/local/writereview?placeid=';
+  const PLACE_ID_RE = /^[A-Za-z0-9_-]{20,}$/;
+  const FINDER = '<a class="underline" target="_blank" rel="noopener" href="https://developers.google.com/maps/documentation/places/web-service/place-id">buscador oficial de Place ID</a>';
+
+  /* Atajo local: si la URL larga ya trae el Place ID no hace falta llamar al
+     servidor (?placeid=, ?query_place_id=, q=place_id:…, …!19sChIJ…). */
+  function quickExtract(href) {
+    let u;
+    try { u = new URL(href); } catch (e) { return null; }
+    let full = u.href;
+    try { full = decodeURIComponent(full); } catch (e) {}
+    for (const k of ['placeid', 'place_id', 'query_place_id', 'destination_place_id']) {
+      const v = u.searchParams.get(k);
+      if (v && PLACE_ID_RE.test(v)) return v;
+    }
+    const m = full.match(/place_id:([A-Za-z0-9_-]{20,})/) || full.match(/ChIJ[A-Za-z0-9_-]{16,}/);
+    return m ? (m[1] || m[0]) : null;
+  }
+  function nameFromPath(href) {
+    try {
+      const pm = new URL(href).pathname.match(/\/maps\/(?:place|search)\/([^/@]+)/);
+      if (!pm) return '';
+      const n = decodeURIComponent(pm[1].replace(/\+/g, ' '));
+      return /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(n) ? '' : n;
+    } catch (e) { return ''; }
+  }
+
+  function setLoading(on) {
+    $('btnGen').disabled = on;
+    $('spin').classList.toggle('hidden', !on);
+    $('btnTxt').textContent = on ? 'Procesando…' : 'Generar enlace de reseña';
+  }
+  function showError(html) {
+    $('result').classList.add('hidden');
+    $('error').innerHTML = html;
+    $('error').classList.remove('hidden');
+  }
+  function showResult(placeId, name, approx) {
+    $('error').classList.add('hidden');
+    $('bizName').textContent = name || '';
+    $('bizName').classList.toggle('hidden', !name);
+    $('link').value = REVIEW_BASE + encodeURIComponent(placeId);
+    $('approxNote').classList.toggle('hidden', !approx);
+    $('result').classList.remove('hidden');
+  }
+
+  async function generate() {
+    const raw = $('url').value.trim();
+    $('error').classList.add('hidden');
+    $('result').classList.add('hidden');
+    if (!raw) return showError('Pega primero un enlace de Google Maps.');
+
+    // Place ID suelto
+    if (/^(ChIJ|GhIJ|Eh|Ei)[A-Za-z0-9_-]{16,}$/.test(raw)) return showResult(raw, '', false);
+
+    let u = null;
+    try { u = new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw); } catch (e) {}
+    if (!u || /\s/.test(raw) || !u.hostname.includes('.')) {
+      return showError('Eso no parece un enlace. Usa el botón “Compartir” de la ficha del negocio en Google Maps.');
+    }
+
+    // 1) Instantáneo si la URL ya incluye el ID
+    const quick = quickExtract(u.href);
+    if (quick) return showResult(quick, nameFromPath(u.href), false);
+
+    // 2) Resolver en el servidor (/api/resolve sigue las redirecciones)
+    setLoading(true);
+    let res, data;
+    try {
+      res = await fetch('/api/resolve?url=' + encodeURIComponent(u.href));
+      data = await res.json();
+    } catch (e) {
+      setLoading(false);
+      return showError('No pude contactar el servidor (/api/resolve). La función solo existe cuando la app está desplegada en Vercel o corre con “vercel dev”; no funciona abriendo el archivo directamente.');
+    }
+    setLoading(false);
+
+    if (data && data.ok && data.placeId) return showResult(data.placeId, data.name || '', !!data.approx);
+
+    const err = (data && data.error) || 'upstream';
+    if (err === 'invalid_url' || err === 'host_not_allowed') {
+      return showError('Ese enlace no parece ser de Google Maps. Usa el botón “Compartir” de la ficha del negocio (maps.app.goo.gl/…) o copia la URL de google.com/maps.');
+    }
+    if (err === 'timeout') return showError('Google tardó demasiado en responder. Intenta de nuevo en unos segundos.');
+    if (err === 'no_place_id') {
+      const extra = (data.ftid || data.cid)
+        ? 'Encontré el identificador interno del lugar (ftid/cid), pero Google no permite convertirlo en Place ID sin su API. '
+        : '';
+      return showError(extra + 'Ese enlace no incluye un Place ID. Prueba con otra URL del mismo negocio o búscalo en el ' + FINDER + '.');
+    }
+    showError('Google no respondió como se esperaba (' + (data && data.status ? 'código ' + data.status : 'error del servidor') + '). Intenta de nuevo en unos segundos.');
+  }
+
+  async function copyLink() {
+    const input = $('link'), btn = $('btnCopy');
+    try { await navigator.clipboard.writeText(input.value); }
+    catch (e) { input.select(); document.execCommand('copy'); }
+    btn.textContent = '✓ ¡Copiado!';
+    btn.classList.replace('bg-blue-600', 'bg-green-600');
+    btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+    setTimeout(() => {
+      btn.textContent = 'Copiar';
+      btn.classList.replace('bg-green-600', 'bg-blue-600');
+      btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+    }, 2000);
+  }
+
+  $('btnGen').addEventListener('click', generate);
+  $('url').addEventListener('keydown', (e) => { if (e.key === 'Enter') generate(); });
+  $('btnCopy').addEventListener('click', copyLink);
+  $('btnTest').addEventListener('click', () => window.open($('link').value, '_blank', 'noopener'));
+})();
+</script>
+</body>
+</html>
